@@ -164,11 +164,11 @@ export function ChatRoom() {
     if (!user) return;
 
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+    const filePath = `${user.id}/${Date.now()}.${fileExt}`;
 
-    const { error: uploadError, data } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('chat-files')
-      .upload(fileName, file);
+      .upload(filePath, file);
 
     if (uploadError) {
       toast({
@@ -179,13 +179,10 @@ export function ChatRoom() {
       return;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('chat-files')
-      .getPublicUrl(fileName);
-
+    // Store the file path, not a public URL - signed URLs will be generated on display
     const { error: messageError } = await supabase.from('messages').insert({
       user_id: user.id,
-      file_url: publicUrl,
+      file_url: filePath, // Store path, not public URL
       file_name: file.name,
       file_type: file.type
     });
