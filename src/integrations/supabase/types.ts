@@ -77,12 +77,41 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          action: string
+          count: number | null
+          user_id: string
+          window_start: string | null
+        }
+        Insert: {
+          action: string
+          count?: number | null
+          user_id: string
+          window_start?: string | null
+        }
+        Update: {
+          action?: string
+          count?: number | null
+          user_id?: string
+          window_start?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_rate_limit: {
+        Args: {
+          p_action: string
+          p_max_requests: number
+          p_user_id: string
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

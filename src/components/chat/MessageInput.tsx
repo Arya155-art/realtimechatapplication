@@ -4,6 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+
+// File validation constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = [
+  'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+  'application/pdf',
+  'text/plain',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/zip'
+];
+const MESSAGE_COOLDOWN = 1000; // 1 second between messages
 
 interface MessageInputProps {
   onSendMessage: (content: string) => Promise<void>;
@@ -16,10 +29,24 @@ export function MessageInput({ onSendMessage, onSendFile, disabled }: MessageInp
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastSentRef = useRef<number>(0);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!message.trim() && !selectedFile) || sending) return;
+
+    // Client-side rate limiting
+    const now = Date.now();
+    if (now - lastSentRef.current < MESSAGE_COOLDOWN) {
+      toast({
+        title: 'Slow down!',
+        description: 'Please wait before sending another message',
+        variant: 'destructive'
+      });
+      return;
+    }
+    lastSentRef.current = now;
 
     setSending(true);
     try {
@@ -38,9 +65,31 @@ export function MessageInput({ onSendMessage, onSendFile, disabled }: MessageInp
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+    if (!file) return;
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: 'File too large',
+        description: 'Maximum file size is 10MB',
+        variant: 'destructive'
+      });
+      e.target.value = '';
+      return;
     }
+
+    // Validate file type
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Only images, PDFs, Word documents, text files, and ZIP archives are allowed',
+        variant: 'destructive'
+      });
+      e.target.value = '';
+      return;
+    }
+
+    setSelectedFile(file);
   };
 
   return (
