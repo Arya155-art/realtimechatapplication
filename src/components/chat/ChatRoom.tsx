@@ -160,6 +160,21 @@ export function ChatRoom() {
     }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId);
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete message',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleSendFile = async (file: File) => {
     if (!user) return;
 
@@ -227,6 +242,7 @@ export function ChatRoom() {
           {messages.map((message, index) => (
             <MessageBubble
               key={message.id}
+              messageId={message.id}
               content={message.content}
               fileUrl={message.file_url}
               fileName={message.file_name}
@@ -235,6 +251,7 @@ export function ChatRoom() {
               isOwn={message.user_id === user?.id}
               profile={getProfileForUser(message.user_id)}
               showAvatar={shouldShowAvatar(message, index)}
+              onDelete={handleDeleteMessage}
             />
           ))}
           <div ref={messagesEndRef} />

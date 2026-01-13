@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { File, Download, Loader2 } from 'lucide-react';
+import { File, Download, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,7 @@ interface Profile {
 }
 
 interface MessageBubbleProps {
+  messageId: string;
   content: string | null;
   fileUrl?: string | null;
   fileName?: string | null;
@@ -21,9 +22,11 @@ interface MessageBubbleProps {
   isOwn: boolean;
   profile: Profile;
   showAvatar?: boolean;
+  onDelete?: (id: string) => void;
 }
 
 export function MessageBubble({
+  messageId,
   content,
   fileUrl,
   fileName,
@@ -31,11 +34,19 @@ export function MessageBubble({
   createdAt,
   isOwn,
   profile,
-  showAvatar = true
+  showAvatar = true,
+  onDelete
 }: MessageBubbleProps) {
   const isImage = fileType?.startsWith('image/');
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!onDelete || isDeleting) return;
+    setIsDeleting(true);
+    onDelete(messageId);
+  };
 
   // Fetch signed URL for private files
   useEffect(() => {
@@ -94,21 +105,22 @@ export function MessageBubble({
         <div className="w-8" />
       )}
 
-      <div className={cn('max-w-[70%] flex flex-col', isOwn ? 'items-end' : 'items-start')}>
+      <div className={cn('max-w-[70%] flex flex-col group', isOwn ? 'items-end' : 'items-start')}>
         {showAvatar && (
           <span className="text-xs text-muted-foreground mb-1 px-1">
             {profile.username}
           </span>
         )}
 
-        <div
-          className={cn(
-            'rounded-2xl px-4 py-2',
-            isOwn ? 'chat-bubble-own rounded-tr-sm' : 'chat-bubble-other rounded-tl-sm'
-          )}
-        >
-          {content && (
-            <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+        <div className="relative">
+          <div
+            className={cn(
+              'rounded-2xl px-4 py-2',
+              isOwn ? 'chat-bubble-own rounded-tr-sm' : 'chat-bubble-other rounded-tl-sm'
+            )}
+          >
+            {content && (
+              <p className="text-sm text-foreground whitespace-pre-wrap break-words">
               {content}
             </p>
           )}
@@ -140,6 +152,23 @@ export function MessageBubble({
               <span className="text-sm truncate flex-1">{fileName}</span>
               <Download className="w-4 h-4 text-muted-foreground" />
             </a>
+          )}
+          </div>
+
+          {isOwn && onDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className={cn(
+                'absolute -left-8 top-1/2 -translate-y-1/2 p-1.5 rounded-full',
+                'bg-destructive/10 hover:bg-destructive/20 text-destructive',
+                'opacity-0 group-hover:opacity-100 transition-opacity',
+                'disabled:opacity-50 disabled:cursor-not-allowed'
+              )}
+              title="Delete message"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
           )}
         </div>
 
