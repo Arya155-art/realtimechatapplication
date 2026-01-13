@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { File, Download, Image as ImageIcon } from 'lucide-react';
+import { File, Download, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from './UserAvatar';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Profile {
   username: string;
@@ -32,6 +34,43 @@ export function MessageBubble({
   showAvatar = true
 }: MessageBubbleProps) {
   const isImage = fileType?.startsWith('image/');
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch signed URL for private files
+  useEffect(() => {
+    if (!fileUrl) return;
+
+    const fetchSignedUrl = async () => {
+      setIsLoading(true);
+      try {
+        // Check if it's already a full URL (legacy public URLs)
+        if (fileUrl.startsWith('http')) {
+          setSignedUrl(fileUrl);
+        } else {
+          // Generate a signed URL with 1 hour expiry
+          const { data, error } = await supabase.storage
+            .from('chat-files')
+            .createSignedUrl(fileUrl, 3600);
+
+          if (error) {
+            console.error('Error creating signed URL:', error);
+            return;
+          }
+
+          if (data?.signedUrl) {
+            setSignedUrl(data.signedUrl);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching signed URL:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSignedUrl();
+  }, [fileUrl]);
 
   return (
     <motion.div
@@ -74,19 +113,25 @@ export function MessageBubble({
             </p>
           )}
 
-          {fileUrl && isImage && (
-            <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
+          {fileUrl && isLoading && (
+            <div className="flex items-center justify-center p-4">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          )}
+
+          {fileUrl && !isLoading && signedUrl && isImage && (
+            <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
               <img
-                src={fileUrl}
+                src={signedUrl}
                 alt={fileName || 'Shared image'}
                 className="max-w-full max-h-64 rounded-lg object-cover"
               />
             </a>
           )}
 
-          {fileUrl && !isImage && (
+          {fileUrl && !isLoading && signedUrl && !isImage && (
             <a
-              href={fileUrl}
+              href={signedUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-background/20 hover:bg-background/30 transition-colors"
