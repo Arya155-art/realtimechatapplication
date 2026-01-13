@@ -152,9 +152,13 @@ export function ChatRoom() {
     });
 
     if (error) {
+      // Check for rate limit error
+      const isRateLimited = error.message?.includes('Rate limit exceeded');
       toast({
-        title: 'Error',
-        description: 'Failed to send message',
+        title: isRateLimited ? 'Rate limit exceeded' : 'Error',
+        description: isRateLimited 
+          ? 'Maximum 10 messages per minute. Please slow down.'
+          : 'Failed to send message',
         variant: 'destructive'
       });
     }
@@ -178,8 +182,21 @@ export function ChatRoom() {
   const handleSendFile = async (file: File) => {
     if (!user) return;
 
-    const fileExt = file.name.split('.').pop();
-    const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+    // Use MIME type to determine extension for safer naming
+    const mimeToExt: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+      'application/pdf': 'pdf',
+      'text/plain': 'txt',
+      'application/msword': 'doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+      'application/zip': 'zip'
+    };
+    
+    const ext = mimeToExt[file.type] || 'bin';
+    const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from('chat-files')
@@ -203,9 +220,13 @@ export function ChatRoom() {
     });
 
     if (messageError) {
+      // Check for rate limit error
+      const isRateLimited = messageError.message?.includes('Rate limit exceeded');
       toast({
-        title: 'Error',
-        description: 'Failed to send file',
+        title: isRateLimited ? 'Rate limit exceeded' : 'Error',
+        description: isRateLimited 
+          ? 'Maximum 10 messages per minute. Please slow down.'
+          : 'Failed to send file',
         variant: 'destructive'
       });
     }
