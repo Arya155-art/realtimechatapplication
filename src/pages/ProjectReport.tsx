@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,58 @@ import {
   Database, 
   Globe,
   ArrowLeft,
-  CheckCircle2
+  CheckCircle2,
+  Download,
+  Loader2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import authScreenshot from "@/assets/screenshots/auth-page.png";
 
 const ProjectReport = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    
+    setIsExporting(true);
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
+      
+      const options = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: "ChatRoom-Project-Report.pdf",
+        image: { type: "jpeg" as const, quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          backgroundColor: "#0f172a"
+        },
+        jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
+        pagebreak: { mode: ["avoid-all", "css", "legacy"] as const }
+      };
+
+      await html2pdf().set(options).from(reportRef.current).save();
+      
+      toast({
+        title: "PDF Exported",
+        description: "Your project report has been downloaded successfully."
+      });
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export PDF. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
   const features = [
     {
       icon: MessageSquare,
@@ -75,7 +120,7 @@ const ProjectReport = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50 print:hidden">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
@@ -86,14 +131,24 @@ const ProjectReport = () => {
               <p className="text-xs text-muted-foreground">Project Report</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => navigate("/auth")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to App
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleExportPDF} disabled={isExporting}>
+              {isExporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {isExporting ? "Exporting..." : "Export PDF"}
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/auth")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to App
+            </Button>
+          </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-12">
+      <main ref={reportRef} className="container mx-auto px-4 py-8 space-y-12">
         {/* Project Overview */}
         <section className="space-y-4">
           <h2 className="text-3xl font-bold">Project Overview</h2>
