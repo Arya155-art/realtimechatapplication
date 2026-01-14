@@ -55,23 +55,18 @@ export function MessageBubble({
     const fetchSignedUrl = async () => {
       setIsLoading(true);
       try {
-        // Check if it's already a full URL (legacy public URLs)
-        if (fileUrl.startsWith('http')) {
-          setSignedUrl(fileUrl);
-        } else {
-          // Generate a signed URL with 1 hour expiry
-          const { data, error } = await supabase.storage
-            .from('chat-files')
-            .createSignedUrl(fileUrl, 3600);
+        // Generate a signed URL with 1 hour expiry
+        const { data, error } = await supabase.storage
+          .from('chat-files')
+          .createSignedUrl(fileUrl, 3600);
 
-          if (error) {
-            console.error('Error creating signed URL:', error);
-            return;
-          }
+        if (error) {
+          console.error('Error creating signed URL:', error);
+          return;
+        }
 
-          if (data?.signedUrl) {
-            setSignedUrl(data.signedUrl);
-          }
+        if (data?.signedUrl) {
+          setSignedUrl(data.signedUrl);
         }
       } catch (error) {
         console.error('Error fetching signed URL:', error);
