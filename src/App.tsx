@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import ProjectReport from "./pages/ProjectReport";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ const App = () => (
                 <Auth />
               </PublicRoute>
             } />
+            <Route path="/report" element={<ProjectReport />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </TooltipProvider>
